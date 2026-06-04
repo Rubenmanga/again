@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 const NAV_ITEMS = [
   {
     href: '/dashboard',
-    label: 'Today',
+    label: 'Hoy',
     Icon: ({ active }: { active: boolean }) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z" />
@@ -16,7 +16,7 @@ const NAV_ITEMS = [
   },
   {
     href: '/progress',
-    label: 'Progress',
+    label: 'Progreso',
     Icon: ({ active }: { active: boolean }) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
         <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
@@ -25,7 +25,7 @@ const NAV_ITEMS = [
   },
   {
     href: '/profile',
-    label: 'Profile',
+    label: 'Perfil',
     Icon: ({ active }: { active: boolean }) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="8" r="4" />

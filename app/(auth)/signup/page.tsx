@@ -22,10 +22,10 @@ export default function SignupPage() {
       {/* Heading */}
       <div className="text-center space-y-1">
         <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-          Create your account
+          Crear tu cuenta
         </h1>
         <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          Start your comeback today
+          Empieza tu vuelta hoy
         </p>
       </div>
 
@@ -40,7 +40,7 @@ export default function SignupPage() {
         <input
           name="email"
           type="email"
-          placeholder="Email"
+          placeholder="Correo electrónico"
           required
           autoComplete="email"
           className={inputClass}
@@ -49,7 +49,7 @@ export default function SignupPage() {
         <input
           name="password"
           type="password"
-          placeholder="Password"
+          placeholder="Contraseña"
           required
           autoComplete="new-password"
           minLength={6}
@@ -58,19 +58,19 @@ export default function SignupPage() {
         />
 
         <button type="submit" disabled={isPending} className="btn-primary">
-          {isPending ? 'Creating account…' : 'Get started'}
+          {isPending ? 'Creando cuenta…' : 'Crear cuenta'}
         </button>
       </form>
 
       {/* Footer link */}
       <p className="text-center text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-        Already have an account?{' '}
+        ¿Ya tienes cuenta?{' '}
         <Link
           href="/login"
           className="font-medium transition-opacity hover:opacity-80"
           style={{ color: 'var(--color-accent)' }}
         >
-          Sign in
+          Entrar
         </Link>
       </p>
     </div>

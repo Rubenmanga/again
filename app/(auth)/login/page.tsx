@@ -26,10 +26,10 @@ export default function LoginPage() {
       {/* Heading */}
       <div className="text-center space-y-1">
         <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-          Welcome back
+          Bienvenido de nuevo
         </h1>
         <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          Sign in to continue your journey
+          Entra para seguir tu camino
         </p>
       </div>
 
@@ -44,7 +44,7 @@ export default function LoginPage() {
         <input
           name="email"
           type="email"
-          placeholder="Email"
+          placeholder="Correo electrónico"
           required
           autoComplete="email"
           className={inputClass}
@@ -53,7 +53,7 @@ export default function LoginPage() {
         <input
           name="password"
           type="password"
-          placeholder="Password"
+          placeholder="Contraseña"
           required
           autoComplete="current-password"
           className={inputClass}
@@ -61,7 +61,7 @@ export default function LoginPage() {
         />
 
         <button type="submit" disabled={isLoginPending} className="btn-primary">
-          {isLoginPending ? 'Signing in…' : 'Sign in'}
+          {isLoginPending ? 'Entrando…' : 'Entrar'}
         </button>
       </form>
 
@@ -69,7 +69,7 @@ export default function LoginPage() {
       <div className="relative flex items-center gap-4">
         <div className="flex-1 h-px" style={{ backgroundColor: 'var(--color-surface-raised)' }} />
         <span className="text-xs shrink-0" style={{ color: 'var(--color-text-secondary)' }}>
-          or
+          o
         </span>
         <div className="flex-1 h-px" style={{ backgroundColor: 'var(--color-surface-raised)' }} />
       </div>
@@ -83,14 +83,14 @@ export default function LoginPage() {
         )}
         {magicState?.success && (
           <p className="rounded-xl px-4 py-3 text-sm text-green-400 bg-green-400/10 border border-green-400/20">
-            Magic link sent — check your email.
+            Enlace enviado — revisa tu correo.
           </p>
         )}
 
         <input
           name="email"
           type="email"
-          placeholder="Email for magic link"
+          placeholder="Correo para entrar sin contraseña"
           required
           autoComplete="email"
           className={inputClass}
@@ -98,19 +98,19 @@ export default function LoginPage() {
         />
 
         <button type="submit" disabled={isMagicPending} className="btn-secondary">
-          {isMagicPending ? 'Sending…' : 'Send magic link'}
+          {isMagicPending ? 'Enviando…' : 'Entrar sin contraseña'}
         </button>
       </form>
 
       {/* Footer link */}
       <p className="text-center text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-        Don&apos;t have an account?{' '}
+        ¿Aún no tienes cuenta?{' '}
         <Link
           href="/signup"
           className="font-medium transition-opacity hover:opacity-80"
           style={{ color: 'var(--color-accent)' }}
         >
-          Sign up
+          Crear cuenta
         </Link>
       </p>
     </div>

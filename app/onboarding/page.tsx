@@ -6,40 +6,40 @@ import { completeOnboarding, type OnboardingData } from './actions'
 // ─── Data ──────────────────────────────────────────────────────────────────
 
 const FITNESS_LEVELS: { value: OnboardingData['fitness_level']; label: string; sub: string }[] = [
-  { value: 'never', label: 'Never really trained', sub: 'Starting from scratch — no problem' },
-  { value: 'rusty', label: 'Used to train, been a while', sub: 'Time to dust off those habits' },
-  { value: 'active', label: 'Currently active', sub: 'Keep the momentum going' },
+  { value: 'never', label: 'Nunca he entrenado de verdad', sub: 'Empezando desde cero — sin problema' },
+  { value: 'rusty', label: 'Antes entrenaba, pero llevo tiempo sin hacerlo', sub: 'Es hora de retomar los hábitos' },
+  { value: 'active', label: 'Sigo siendo algo activo', sub: 'Sigue adelante con el ritmo' },
 ]
 
 const PRIMARY_GOALS: { value: OnboardingData['primary_goal']; label: string; sub: string }[] = [
-  { value: 'rebuild_muscle', label: 'Rebuild muscle', sub: 'Regain strength and size' },
-  { value: 'lose_fat', label: 'Lose fat', sub: 'Lean out and feel lighter' },
-  { value: 'feel_better', label: 'Feel better overall', sub: 'Move well, sleep well, live well' },
-  { value: 'energy', label: 'More energy', sub: 'Stop feeling drained by noon' },
+  { value: 'rebuild_muscle', label: 'Recuperar músculo', sub: 'Recuperar fuerza y volumen' },
+  { value: 'lose_fat', label: 'Perder algo de grasa', sub: 'Ponerse en forma y sentirse más ligero' },
+  { value: 'feel_better', label: 'Sentirme mejor en el día a día', sub: 'Moverse bien, dormir bien, vivir bien' },
+  { value: 'energy', label: 'Tener más energía', sub: 'Dejar de sentirse agotado antes del mediodía' },
 ]
 
 const TIMES: { value: OnboardingData['available_time']; label: string; sub: string }[] = [
-  { value: 15, label: '15 min', sub: 'Quick and focused' },
-  { value: 30, label: '30 min', sub: 'The sweet spot' },
-  { value: 45, label: '45 min', sub: 'Full session' },
-  { value: 60, label: '60 min', sub: 'No rush' },
+  { value: 15, label: '15 min', sub: 'Rápido y concentrado' },
+  { value: 30, label: '30 min', sub: 'El tiempo justo' },
+  { value: 45, label: '45 min', sub: 'Sesión completa' },
+  { value: 60, label: '60 min', sub: 'Sin prisa' },
 ]
 
 const EQUIPMENT: { value: string; label: string; sub: string }[] = [
-  { value: 'none', label: 'Bodyweight only', sub: 'No equipment needed' },
-  { value: 'dumbbells', label: 'Dumbbells', sub: 'Fixed or adjustable' },
-  { value: 'resistance_bands', label: 'Resistance bands', sub: 'Light to heavy' },
-  { value: 'pull_up_bar', label: 'Pull-up bar', sub: 'Door-frame or wall-mounted' },
+  { value: 'none', label: 'Solo mi cuerpo', sub: 'Sin equipamiento' },
+  { value: 'dumbbells', label: 'Mancuernas', sub: 'Fijas o ajustables' },
+  { value: 'resistance_bands', label: 'Elástico', sub: 'De ligero a intenso' },
+  { value: 'pull_up_bar', label: 'Barra de dominadas', sub: 'De marco de puerta o pared' },
 ]
 
 const DAYS = [
-  { label: 'Mon', value: 1 },
-  { label: 'Tue', value: 2 },
-  { label: 'Wed', value: 3 },
-  { label: 'Thu', value: 4 },
-  { label: 'Fri', value: 5 },
-  { label: 'Sat', value: 6 },
-  { label: 'Sun', value: 0 },
+  { label: 'Lu', value: 1 },
+  { label: 'Ma', value: 2 },
+  { label: 'Mi', value: 3 },
+  { label: 'Ju', value: 4 },
+  { label: 'Vi', value: 5 },
+  { label: 'Sa', value: 6 },
+  { label: 'Do', value: 0 },
 ]
 
 const TOTAL_STEPS = 5
@@ -141,7 +141,7 @@ export default function OnboardingPage() {
 
           <div className="flex flex-col gap-1.5">
             <div className="flex justify-between text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-              <span>Step {step} of {TOTAL_STEPS}</span>
+              <span>Paso {step} de {TOTAL_STEPS}</span>
             </div>
             <div className="w-full h-1 rounded-full" style={{ backgroundColor: 'var(--color-surface-raised)' }}>
               <div
@@ -158,7 +158,7 @@ export default function OnboardingPage() {
         {/* Step content */}
         <div className="flex flex-col gap-6">
           {step === 1 && (
-            <StepShell title="What's your fitness history?" sub="Be honest — this shapes your workouts">
+            <StepShell title="¿Cuánto tiempo llevas sin entrenar?" sub="Sé honesto — esto define tus entrenos">
               {FITNESS_LEVELS.map((opt) => (
                 <OptionCard
                   key={opt.value}
@@ -172,7 +172,7 @@ export default function OnboardingPage() {
           )}
 
           {step === 2 && (
-            <StepShell title="What's your main goal?" sub="We'll build everything around this">
+            <StepShell title="¿Qué es lo que más quieres conseguir?" sub="Todo lo diseñaremos en torno a esto">
               {PRIMARY_GOALS.map((opt) => (
                 <OptionCard
                   key={opt.value}
@@ -186,7 +186,7 @@ export default function OnboardingPage() {
           )}
 
           {step === 3 && (
-            <StepShell title="How long per session?" sub="Pick what you can realistically commit to">
+            <StepShell title="¿Cuánto tiempo tienes por sesión?" sub="Elige lo que puedes cumplir de verdad">
               {TIMES.map((opt) => (
                 <OptionCard
                   key={opt.value}
@@ -200,7 +200,7 @@ export default function OnboardingPage() {
           )}
 
           {step === 4 && (
-            <StepShell title="What equipment do you have?" sub="Select all that apply">
+            <StepShell title="¿Con qué cuentas en casa?" sub="Selecciona todo lo que tengas">
               {EQUIPMENT.map((opt) => (
                 <OptionCard
                   key={opt.value}
@@ -215,7 +215,7 @@ export default function OnboardingPage() {
           )}
 
           {step === 5 && (
-            <StepShell title="Which days work for you?" sub="Pick at least one">
+            <StepShell title="¿Qué días te vienen bien?" sub="Elige al menos uno">
               <div className="flex flex-wrap gap-2 pt-1">
                 {DAYS.map((day) => (
                   <button
@@ -272,7 +272,7 @@ export default function OnboardingPage() {
               className="btn-primary"
               style={{ flex: 1 }}
             >
-              Next
+              Continuar
             </button>
           ) : (
             <button
@@ -281,7 +281,7 @@ export default function OnboardingPage() {
               className="btn-primary"
               style={{ flex: 1 }}
             >
-              {isPending ? 'Saving…' : "Let's go →"}
+              {isPending ? 'Guardando…' : '¡Vamos! →'}
             </button>
           )}
         </div>

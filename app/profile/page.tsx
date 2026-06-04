@@ -8,7 +8,7 @@ export default function ProfilePage() {
     >
       <div className="flex-1 flex items-center justify-center pb-16">
         <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          Profile coming soon
+          Perfil próximamente
         </p>
       </div>
       <BottomNav />

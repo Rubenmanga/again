@@ -8,7 +8,7 @@ export default function ProgressPage() {
     >
       <div className="flex-1 flex items-center justify-center pb-16">
         <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          Progress coming soon
+          Aquí verás tu progreso pronto
         </p>
       </div>
       <BottomNav />

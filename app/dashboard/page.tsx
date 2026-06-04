@@ -3,27 +3,27 @@ import { redirect } from 'next/navigation'
 import BottomNav from './BottomNav'
 
 const DAYS = [
-  { label: 'Mon', value: 1 },
-  { label: 'Tue', value: 2 },
-  { label: 'Wed', value: 3 },
-  { label: 'Thu', value: 4 },
-  { label: 'Fri', value: 5 },
-  { label: 'Sat', value: 6 },
-  { label: 'Sun', value: 0 },
+  { label: 'Lu', value: 1 },
+  { label: 'Ma', value: 2 },
+  { label: 'Mi', value: 3 },
+  { label: 'Ju', value: 4 },
+  { label: 'Vi', value: 5 },
+  { label: 'Sa', value: 6 },
+  { label: 'Do', value: 0 },
 ]
 
 const MESSAGES = [
-  'Better 5 minutes than zero.',
-  "You're rebuilding, not restarting.",
-  'Today still counts.',
-  'Momentum matters more than perfection.',
-  'Small moves compound.',
+  'Mejor 5 minutos que nada.',
+  'Estás volviendo, no empezando de cero.',
+  'Hoy también cuenta.',
+  'La constancia vale más que la perfección.',
+  'Los pasos pequeños se acumulan.',
 ]
 
 function getGreeting(hour: number): string {
-  if (hour >= 5 && hour < 12) return 'Good morning'
-  if (hour >= 12 && hour < 18) return 'Good afternoon'
-  return 'Good evening'
+  if (hour >= 5 && hour < 12) return 'Buenos días'
+  if (hour >= 12 && hour < 18) return 'Buenas tardes'
+  return 'Buenas noches'
 }
 
 function getWeekStartISO(): string {
@@ -125,13 +125,13 @@ export default async function DashboardPage() {
                 className="text-xs font-semibold uppercase tracking-wider"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
-                Today
+                Hoy
               </p>
               <p className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                Rest day
+                Día de descanso
               </p>
               <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                Today's a rest day. That's part of the plan.
+                Hoy toca descansar. También es parte del proceso.
               </p>
             </div>
           ) : (
@@ -141,7 +141,7 @@ export default async function DashboardPage() {
                   className="text-xs font-semibold uppercase tracking-wider"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
-                  Today's workout
+                  Entrenamiento de hoy
                 </p>
                 <div className="flex items-center gap-2">
                   <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
@@ -149,12 +149,12 @@ export default async function DashboardPage() {
                   </span>
                   <span style={{ color: 'var(--color-surface-raised)' }}>·</span>
                   <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                    5 exercises
+                    5 ejercicios
                   </span>
                 </div>
               </div>
               <button className="btn-primary">
-                Start workout
+                Empezar
               </button>
             </div>
           )}
@@ -166,7 +166,7 @@ export default async function DashboardPage() {
             className="text-xs font-semibold uppercase tracking-wider"
             style={{ color: 'var(--color-text-secondary)' }}
           >
-            This week
+            Esta semana
           </p>
           <div className="flex justify-between">
             {DAYS.map((day) => {
