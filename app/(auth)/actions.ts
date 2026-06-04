@@ -65,11 +65,19 @@ export async function signup(_: AuthState, formData: FormData): Promise<AuthStat
   const email = formData.get('email') as string
   const password = formData.get('password') as string
 
-  const { error } = await supabase.auth.signUp({ email, password })
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { emailRedirectTo: `${siteUrl}/auth/callback` },
+  })
 
   if (error) {
     return { error: error.message }
   }
 
-  redirect('/onboarding')
+  // User must verify their email before they have a session.
+  // The /auth/callback route handles the post-verification redirect.
+  return { success: true }
 }
