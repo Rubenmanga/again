@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import ServiceWorkerRegistration from "./ServiceWorkerRegistration";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -9,8 +10,21 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Again",
-  description: "Your personal fitness comeback",
+  title: "AGAIN",
+  description: "Vuelve a moverte. Sin presión.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "AGAIN",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    apple: "/icons/icon-192.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0D0D0D",
 };
 
 export default function RootLayout({
@@ -19,8 +33,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="es" className={`${inter.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <ServiceWorkerRegistration />
+      </body>
     </html>
   );
 }

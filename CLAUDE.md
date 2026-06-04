@@ -11,6 +11,8 @@ Phase 3 Part 3 ✅ — Exercise seed (55 exercises in Spanish, `003_exercise_see
 Phase 3 Part 4 ✅ — Full UI translated to Spanish (tuteo, calm tone)
 Phase 4 Part 1 ✅ — Workout engine (rule-based generator) + generate-workout server action + wired Empezar button
 Phase 4 Part 2 ✅ — Workout session screen (`/workout/[id]`) — intro, exercise, rest, finish states
+Phase 4 Part 3 ✅ — Progress screen (`/progress`) — weekly stats, streak, last 7 sessions, cumulative totals; writes to progress_stats
+Phase 5 Part 1 ✅ — PWA setup — manifest.json, icons, service worker, layout head tags
 Vercel ✅ — Deployed and connected (https://again-ten-zeta.vercel.app)
 
 ## Key decisions
@@ -135,6 +137,36 @@ INTRO (2 s auto-advance)
 | `supabase/migrations/002_user_profile_trigger.sql` | Applied — creates public.users row on auth.users insert |
 | `supabase/migrations/003_exercise_seed.sql` | **Pending** — run manually in Supabase SQL Editor |
 
-## What's next — Phase 4 (remaining)
-- Progress page: weekly stats, streak, consistency chart
+## Progress Screen (Phase 4 Part 3)
+
+| File | Purpose |
+|------|---------|
+| `app/progress/page.tsx` | Server component — fetches full workout_history, computes stats, upserts into progress_stats, renders 3 sections |
+
+### Data flow
+- Fetches all `workout_history` rows (completed_at IS NOT NULL) in parallel with onboarding and last 7 for display
+- Computes: sessionsThisWeek, minutesThisWeek, streak (consecutive days back from today), consistencyPct (days_trained/schedule_days, cap 100), totalSessions, totalMinutes
+- Upserts into `progress_stats`: check by (user_id, week_start) → update if exists, insert if not
+- Formats dates as "Lun 2 jun" (Spanish UTC-based)
+
+### Sections
+1. **Esta semana** — 2×2 grid: Sesiones / Minutos / Racha / Constancia
+2. **Últimas sesiones** — last 7 history rows joined with workouts.title; encouraging empty state
+3. **Desde que empezaste** — total sessions + total minutes side by side
+
+## PWA (Phase 5 Part 1)
+
+| File | Purpose |
+|------|---------|
+| `public/manifest.json` | Web App Manifest — name, icons, display:standalone, colors |
+| `public/icons/icon-192.png` | 192×192 solid #0D0D0D PNG (placeholder — no text; canvas/sharp not available) |
+| `public/icons/icon-512.png` | 512×512 solid #0D0D0D PNG (placeholder) |
+| `public/sw.js` | Service worker — cache-first, precaches /, /dashboard, manifest, icons |
+| `app/ServiceWorkerRegistration.tsx` | Client component — registers SW in useEffect |
+| `app/layout.tsx` | Updated — manifest link, themeColor, appleWebApp, apple-touch-icon via Next.js Metadata/Viewport API; imports ServiceWorkerRegistration |
+
+### Icon note
+Icons are valid solid-color PNGs (#0D0D0D background, no "AG" text). Add centered "AG" text using `sharp` or `canvas` when available: `npm install sharp`, then update the generation script.
+
+## What's next
 - Profile page: display name, schedule edit, sign out
