@@ -13,13 +13,26 @@ export async function login(_: AuthState, formData: FormData): Promise<AuthState
   const email = formData.get('email') as string
   const password = formData.get('password') as string
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
     return { error: error.message }
   }
 
-  redirect('/app/today')
+  const userId = data.user?.id
+  if (userId) {
+    const { data: profile } = await supabase
+      .from('users')
+      .select('onboarding_complete')
+      .eq('id', userId)
+      .single()
+
+    if (!profile?.onboarding_complete) {
+      redirect('/onboarding')
+    }
+  }
+
+  redirect('/dashboard')
 }
 
 export async function loginWithMagicLink(
