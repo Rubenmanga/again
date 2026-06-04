@@ -1,6 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import BottomNav from './BottomNav'
+import StartWorkoutButton from './StartWorkoutButton'
+
+const EXERCISE_COUNTS: Record<number, number> = { 15: 4, 30: 6, 45: 9, 60: 12 }
 
 const DAYS = [
   { label: 'Lu', value: 1 },
@@ -149,13 +152,11 @@ export default async function DashboardPage() {
                   </span>
                   <span style={{ color: 'var(--color-surface-raised)' }}>·</span>
                   <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                    5 ejercicios
+                    {EXERCISE_COUNTS[onboarding.available_time] ?? 6} ejercicios
                   </span>
                 </div>
               </div>
-              <button className="btn-primary">
-                Empezar
-              </button>
+              <StartWorkoutButton />
             </div>
           )}
         </section>
