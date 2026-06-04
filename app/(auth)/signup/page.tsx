@@ -17,28 +17,6 @@ const inputStyle = {
 export default function SignupPage() {
   const [state, action, isPending] = useActionState(signup, null)
 
-  if (state?.success) {
-    return (
-      <div className="space-y-4 text-center">
-        <div
-          className="w-14 h-14 rounded-full flex items-center justify-center mx-auto text-2xl"
-          style={{ backgroundColor: 'var(--color-surface-raised)' }}
-        >
-          ✉️
-        </div>
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-          Check your email
-        </h1>
-        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          We sent a confirmation link to your inbox. Click it to activate your account and start your onboarding.
-        </p>
-        <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-          Didn&apos;t get it? Check your spam folder.
-        </p>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-7">
       {/* Heading */}
