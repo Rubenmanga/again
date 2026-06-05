@@ -40,7 +40,7 @@ export async function generateWorkoutAction(
   const fitnessLevel = onboarding.fitness_level as 'never' | 'rusty' | 'active'
   const availableTime = durationMinutes
 
-  let maxDifficulty = ({ never: 2, rusty: 3, active: 4 } as const)[fitnessLevel]
+  let maxDifficulty: number = ({ never: 2, rusty: 3, active: 4 } as const)[fitnessLevel]
   if (energyMode === 'low') maxDifficulty = Math.max(1, maxDifficulty - 1)
   if (energyMode === 'minimal') maxDifficulty = Math.max(1, maxDifficulty - 1)
   if (energyMode === 'bare') maxDifficulty = 2
