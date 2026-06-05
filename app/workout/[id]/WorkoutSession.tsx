@@ -3,13 +3,14 @@
 import { useReducer, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { saveWorkoutHistoryAction } from '@/app/actions/save-workout-history'
+import { upsertWorkoutSession } from '@/app/actions/workout-session'
 import ExerciseImage from './ExerciseImage'
 import SwapDrawer from './SwapDrawer'
 import type { WorkoutExercise } from './page'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-type Phase = 'preview' | 'intro' | 'exercise' | 'rest' | 'finish'
+type Phase = 'preview' | 'intro' | 'exercise' | 'rest' | 'feedback' | 'finish'
 
 type State = {
   phase: Phase
@@ -34,6 +35,7 @@ type Action =
   | { type: 'SHOW_EXIT' }
   | { type: 'HIDE_EXIT' }
   | { type: 'REPLACE_EXERCISE'; exercise: WorkoutExercise }
+  | { type: 'SUBMIT_FEEDBACK' }
 
 // ─── Reducer ────────────────────────────────────────────────────────────────
 
@@ -50,7 +52,7 @@ function makeExerciseState(exercises: WorkoutExercise[], index: number) {
 function finishOrRest(state: State, nextCompletedCount: number): State {
   const isLast = state.exerciseIndex === state.exercises.length - 1
   if (isLast) {
-    return { ...state, phase: 'finish', completedCount: nextCompletedCount }
+    return { ...state, phase: 'feedback', completedCount: nextCompletedCount }
   }
   return { ...state, phase: 'rest', restTimeLeft: 20, completedCount: nextCompletedCount }
 }
@@ -68,7 +70,7 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         phase: 'exercise',
-        ...makeExerciseState(state.exercises, 0),
+        ...makeExerciseState(state.exercises, state.exerciseIndex),
       }
     }
 
@@ -140,6 +142,10 @@ function reducer(state: State, action: Action): State {
       }
     }
 
+    case 'SUBMIT_FEEDBACK': {
+      return { ...state, phase: 'finish' }
+    }
+
     default: return state
   }
 }
@@ -184,6 +190,7 @@ export default function WorkoutSession({
   userId,
   fitnessLevel,
   equipment,
+  initialExerciseIndex = 0,
 }: {
   workoutId: string
   title: string
@@ -192,20 +199,25 @@ export default function WorkoutSession({
   userId: string
   fitnessLevel: 'never' | 'rusty' | 'active'
   equipment: string[]
+  initialExerciseIndex?: number
 }) {
   const router = useRouter()
   const startedAtRef = useRef<Date | null>(null)
   const savedRef = useRef(false)
   const prevPhaseRef = useRef<Phase>('preview')
+  const feedbackIntensityRef = useRef<number | null>(null)
+  const feedbackMoodRef = useRef<number | null>(null)
 
   const [showSwapDrawer, setShowSwapDrawer] = useState(false)
+  const [feedbackIntensity, setFeedbackIntensity] = useState<number | null>(null)
+  const [feedbackMood, setFeedbackMood] = useState<number | null>(null)
 
   const [state, dispatch] = useReducer(reducer, {
     phase: 'preview',
-    exerciseIndex: 0,
+    exerciseIndex: initialExerciseIndex,
     setsDone: 0,
     restTimeLeft: 20,
-    exerciseTimeLeft: exercises[0]?.duration_seconds ?? 0,
+    exerciseTimeLeft: exercises[initialExerciseIndex]?.duration_seconds ?? 0,
     timerDone: false,
     completedCount: 0,
     showExitModal: false,
@@ -244,6 +256,16 @@ export default function WorkoutSession({
     return () => clearInterval(t)
   }, [state.phase, state.exerciseIndex])
 
+  // Save progress when exercise index changes
+  useEffect(() => {
+    if (state.phase !== 'exercise' && state.phase !== 'rest') return
+    upsertWorkoutSession({
+      workoutId,
+      currentExerciseIndex: state.exerciseIndex,
+      completed: false,
+    }).catch(() => {})
+  }, [state.exerciseIndex])
+
   // Save to DB on finish
   useEffect(() => {
     if (state.phase !== 'finish') return
@@ -259,6 +281,13 @@ export default function WorkoutSession({
       completedAt: now.toISOString(),
       durationActualMinutes: durationActual,
       exercisesCompleted: state.completedCount,
+      intensityActual: feedbackIntensityRef.current ?? undefined,
+      moodAfter: feedbackMoodRef.current ?? undefined,
+    }).catch(() => {})
+    upsertWorkoutSession({
+      workoutId,
+      currentExerciseIndex: state.exerciseIndex,
+      completed: true,
     }).catch(() => {})
   }, [state.phase])
 
@@ -351,6 +380,11 @@ export default function WorkoutSession({
           <p className="text-sm" style={{ color: 'var(--color-text-secondary)', marginTop: '0.25rem' }}>
             {state.exercises.length} ejercicios
           </p>
+          {initialExerciseIndex > 0 && (
+            <p style={{ color: 'var(--color-accent)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+              Continúas desde el ejercicio {initialExerciseIndex + 1}
+            </p>
+          )}
         </div>
 
         <div
@@ -373,6 +407,7 @@ export default function WorkoutSession({
                 flexDirection: 'row',
                 gap: '0.75rem',
                 alignItems: 'center',
+                opacity: i < initialExerciseIndex ? 0.4 : 1,
               }}
             >
               <span
@@ -467,6 +502,106 @@ export default function WorkoutSession({
     )
   }
 
+  // ── FEEDBACK ─────────────────────────────────────────────────────────────
+
+  if (state.phase === 'feedback') {
+    const canSubmit = feedbackIntensity !== null && feedbackMood !== null
+
+    function handleSubmitFeedback() {
+      feedbackIntensityRef.current = feedbackIntensity
+      feedbackMoodRef.current = feedbackMood
+      dispatch({ type: 'SUBMIT_FEEDBACK' })
+    }
+
+    return (
+      <Screen>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '2rem', padding: '2rem 1rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <p style={{ color: 'var(--color-text-primary)', fontWeight: 600, fontSize: '1rem' }}>
+              ¿Qué tan duro fue?
+            </p>
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'space-between' }}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setFeedbackIntensity(n)}
+                  style={{
+                    flex: 1,
+                    height: '48px',
+                    borderRadius: '0.75rem',
+                    border: `2px solid ${feedbackIntensity === n ? 'var(--color-accent)' : 'transparent'}`,
+                    backgroundColor: 'var(--color-surface-raised)',
+                    color: feedbackIntensity === n ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+                    fontWeight: feedbackIntensity === n ? 700 : 400,
+                    fontSize: '1rem',
+                    cursor: 'pointer',
+                    opacity: feedbackIntensity !== null && feedbackIntensity !== n ? 0.5 : 1,
+                    transition: 'all 150ms ease',
+                  }}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <p style={{ color: 'var(--color-text-primary)', fontWeight: 600, fontSize: '1rem' }}>
+              ¿Cómo te sientes ahora?
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {[
+                { value: 1, label: 'Peor' },
+                { value: 3, label: 'Igual' },
+                { value: 5, label: 'Mejor' },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setFeedbackMood(opt.value)}
+                  style={{
+                    padding: '0.875rem 1rem',
+                    borderRadius: '0.75rem',
+                    border: `2px solid ${feedbackMood === opt.value ? 'var(--color-accent)' : 'transparent'}`,
+                    backgroundColor: 'var(--color-surface-raised)',
+                    color: feedbackMood === opt.value ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+                    fontWeight: feedbackMood === opt.value ? 600 : 400,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    fontSize: '0.875rem',
+                    opacity: feedbackMood !== null && feedbackMood !== opt.value ? 0.5 : 1,
+                    transition: 'all 150ms ease',
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            className="btn-primary"
+            onClick={handleSubmitFeedback}
+            disabled={!canSubmit}
+            style={{ opacity: canSubmit ? 1 : 0.4 }}
+          >
+            Guardar
+          </button>
+
+          <button
+            onClick={() => dispatch({ type: 'SUBMIT_FEEDBACK' })}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--color-text-secondary)', fontSize: '0.75rem',
+              minHeight: '44px',
+            }}
+          >
+            Saltar
+          </button>
+        </div>
+      </Screen>
+    )
+  }
+
   // ── FINISH ───────────────────────────────────────────────────────────────
 
   if (state.phase === 'finish') {
@@ -497,6 +632,12 @@ export default function WorkoutSession({
             <StatBlock label="Tiempo" value={`${elapsed} min`} />
             <StatBlock label="Ejercicios" value={`${state.completedCount} de ${state.exercises.length}`} />
           </div>
+
+          {feedbackIntensityRef.current !== null && (
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', textAlign: 'center', fontStyle: 'italic' }}>
+              Guardado. Esta sesión cuenta.
+            </p>
+          )}
 
           <button
             className="btn-primary"
@@ -645,19 +786,16 @@ export default function WorkoutSession({
       {/* Exercise card */}
       <div className="flex-1 overflow-y-auto px-4 pb-4">
         <div className="card flex flex-col gap-4">
-          {/* Exercise image */}
           <ExerciseImage
             img0={currentEx.gif_url}
             img1={currentEx.thumbnail_url}
             name={currentEx.name}
           />
 
-          {/* Name */}
           <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
             {currentEx.name}
           </h1>
 
-          {/* Muscle groups */}
           <div className="flex flex-wrap gap-1.5">
             {currentEx.muscle_groups.map((m) => (
               <span key={m} className="pill" style={{ fontSize: '0.75rem' }}>
@@ -666,7 +804,6 @@ export default function WorkoutSession({
             ))}
           </div>
 
-          {/* Sets/reps or duration */}
           <div>
             {isTimed ? (
               <p className="text-4xl font-bold tabular-nums" style={{ color: 'var(--color-accent)' }}>
@@ -679,17 +816,14 @@ export default function WorkoutSession({
             )}
           </div>
 
-          {/* Instructions */}
           <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-primary)' }}>
             {currentEx.instructions}
           </p>
 
-          {/* Coaching cue */}
           <p className="text-sm italic" style={{ color: 'var(--color-text-secondary)' }}>
             {currentEx.coaching_cue}
           </p>
 
-          {/* Difficulty dots */}
           <div className="flex items-center gap-2">
             <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
               Dificultad
@@ -765,6 +899,26 @@ export default function WorkoutSession({
           }}
         >
           Cambiar ejercicio
+        </button>
+
+        <button
+          onClick={() => {
+            import('@/app/actions/exercise-preferences').then(({ markExerciseDisliked }) => {
+              markExerciseDisliked(currentEx.id).catch(() => {})
+            })
+            setShowSwapDrawer(true)
+          }}
+          className="text-sm text-center"
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: 'var(--color-text-secondary)',
+            minHeight: '44px',
+            fontSize: '0.75rem',
+          }}
+        >
+          No me gusta este ejercicio
         </button>
       </div>
     </Screen>

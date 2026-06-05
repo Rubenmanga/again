@@ -9,6 +9,9 @@ export async function saveWorkoutHistoryAction(params: {
   completedAt: string
   durationActualMinutes: number
   exercisesCompleted: number
+  energyMode?: string
+  intensityActual?: number
+  moodAfter?: number
 }): Promise<void> {
   const supabase = await createClient()
 
@@ -19,5 +22,8 @@ export async function saveWorkoutHistoryAction(params: {
     completed_at: params.completedAt,
     duration_actual_minutes: params.durationActualMinutes,
     exercises_completed: params.exercisesCompleted,
+    ...(params.energyMode && { energy_mode: params.energyMode }),
+    ...(params.intensityActual && { intensity_actual: params.intensityActual }),
+    ...(params.moodAfter && { mood_after: params.moodAfter }),
   })
 }

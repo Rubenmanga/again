@@ -20,7 +20,7 @@ export default async function WorkoutPage({
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: workout }, { data: onboarding }] = await Promise.all([
+  const [{ data: workout }, { data: onboarding }, { data: savedSession }] = await Promise.all([
     supabase
       .from('workouts')
       .select('id, title, duration_minutes, exercise_ids')
@@ -32,6 +32,13 @@ export default async function WorkoutPage({
       .select('fitness_level, equipment')
       .eq('user_id', user.id)
       .single(),
+    supabase
+      .from('workout_sessions')
+      .select('current_exercise_index')
+      .eq('workout_id', id)
+      .eq('user_id', user.id)
+      .eq('completed', false)
+      .maybeSingle(),
   ])
 
   if (!workout) redirect('/dashboard')
@@ -77,6 +84,7 @@ export default async function WorkoutPage({
       userId={user.id}
       fitnessLevel={fitnessLevel}
       equipment={equipment}
+      initialExerciseIndex={savedSession?.current_exercise_index ?? 0}
     />
   )
 }

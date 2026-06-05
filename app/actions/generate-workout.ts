@@ -2,9 +2,13 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { generateWorkout, type Exercise } from '@/lib/workout-engine'
+import { generateWorkout, type Exercise, type EnergyMode } from '@/lib/workout-engine'
+import { getDislikedExerciseIds } from './exercise-preferences'
 
-export async function generateWorkoutAction(durationMinutes: 15 | 30 | 45 | 60): Promise<{ error: string } | undefined> {
+export async function generateWorkoutAction(
+  durationMinutes: 15 | 30 | 45 | 60,
+  energyMode: EnergyMode = 'normal',
+): Promise<{ error: string } | undefined> {
   const supabase = await createClient()
 
   const {
@@ -35,20 +39,30 @@ export async function generateWorkoutAction(durationMinutes: 15 | 30 | 45 | 60):
 
   const fitnessLevel = onboarding.fitness_level as 'never' | 'rusty' | 'active'
   const availableTime = durationMinutes
-  const maxDifficulty = ({ never: 2, rusty: 3, active: 4 } as const)[fitnessLevel]
+
+  let maxDifficulty = ({ never: 2, rusty: 3, active: 4 } as const)[fitnessLevel]
+  if (energyMode === 'low') maxDifficulty = Math.max(1, maxDifficulty - 1)
+  if (energyMode === 'minimal') maxDifficulty = Math.max(1, maxDifficulty - 1)
+  if (energyMode === 'bare') maxDifficulty = 2
+
   const equipmentFilter = onboarding.equipment.includes('resistance_bands')
     ? ['none', 'resistance_bands']
     : ['none']
 
-  const { data: exercises, error: exercisesError } = await supabase
-    .from('exercises')
-    .select('*')
-    .lte('difficulty', maxDifficulty)
-    .in('equipment_required', equipmentFilter)
+  const [{ data: exercises, error: exercisesError }, dislikedIds] = await Promise.all([
+    supabase
+      .from('exercises')
+      .select('*')
+      .lte('difficulty', maxDifficulty)
+      .in('equipment_required', equipmentFilter),
+    getDislikedExerciseIds(),
+  ])
 
   if (exercisesError || !exercises?.length) {
     return { error: 'No pudimos generar el entrenamiento. Inténtalo de nuevo.' }
   }
+
+  const filteredExercises = (exercises as Exercise[]).filter(e => !dislikedIds.includes(e.id))
 
   const workout = generateWorkout({
     userId: user.id,
@@ -56,7 +70,8 @@ export async function generateWorkoutAction(durationMinutes: 15 | 30 | 45 | 60):
     availableTime,
     equipment: onboarding.equipment as string[],
     recentExerciseIds,
-    exercises: exercises as Exercise[],
+    exercises: filteredExercises.length > 0 ? filteredExercises : exercises as Exercise[],
+    energyMode,
   })
 
   if (!workout.exercises.length) {
@@ -74,6 +89,7 @@ export async function generateWorkoutAction(durationMinutes: 15 | 30 | 45 | 60):
       duration_minutes: workout.durationMinutes,
       exercise_ids: workout.exercises.map((e) => e.id),
       intensity,
+      energy_mode: energyMode,
     })
     .select('id')
     .single()

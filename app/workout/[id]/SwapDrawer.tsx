@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { getExerciseAlternatives } from '@/app/actions/get-exercise-alternatives'
+import { markExerciseDisliked } from '@/app/actions/exercise-preferences'
 import type { Exercise } from '@/lib/workout-engine'
 import type { WorkoutExercise } from './page'
 
@@ -23,12 +24,20 @@ export default function SwapDrawer({
   onClose,
 }: SwapDrawerProps) {
   const [alternatives, setAlternatives] = useState<Exercise[] | null>(null)
+  const [dislikedConfirm, setDislikedConfirm] = useState<string | null>(null)
 
   useEffect(() => {
     getExerciseAlternatives(currentExercise.id, excludeIds, maxDifficulty, equipmentFilter)
       .then(setAlternatives)
       .catch(() => setAlternatives([]))
   }, [])
+
+  async function handleDislike(exerciseId: string) {
+    await markExerciseDisliked(exerciseId).catch(() => {})
+    setAlternatives(prev => (prev ?? []).filter(a => a.id !== exerciseId))
+    setDislikedConfirm(exerciseId)
+    setTimeout(() => setDislikedConfirm(null), 2000)
+  }
 
   return (
     <>
@@ -109,64 +118,81 @@ export default function SwapDrawer({
             </p>
           ) : (
             alternatives.map((alt) => (
-              <button
-                key={alt.id}
-                onClick={() => onSwap({ ...alt, easier_alternative: null })}
-                style={{
-                  backgroundColor: 'var(--color-surface-raised)',
-                  border: '1px solid transparent',
-                  borderRadius: '0.75rem',
-                  padding: '0.75rem',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  flexDirection: 'row',
-                  gap: '0.75rem',
-                  alignItems: 'center',
-                  width: '100%',
-                }}
-              >
-                {alt.gif_url && (
-                  <img
-                    src={alt.gif_url}
-                    alt={alt.name}
-                    style={{
-                      width: '56px',
-                      height: '56px',
-                      borderRadius: '0.5rem',
-                      objectFit: 'cover',
-                      objectPosition: 'top',
-                      flexShrink: 0,
-                    }}
-                  />
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p
-                    className="text-sm"
-                    style={{ fontWeight: 600, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                  >
-                    {alt.name}
-                  </p>
-                  {alt.muscle_groups[0] && (
-                    <span className="pill" style={{ fontSize: '0.75rem', marginTop: '0.25rem', display: 'inline-block' }}>
-                      {alt.muscle_groups[0]}
-                    </span>
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div
-                      key={i}
+              <div key={alt.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <button
+                  onClick={() => onSwap({ ...alt, easier_alternative: null })}
+                  style={{
+                    backgroundColor: 'var(--color-surface-raised)',
+                    border: '1px solid transparent',
+                    borderRadius: '0.75rem',
+                    padding: '0.75rem',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    display: 'flex',
+                    flexDirection: 'row',
+                    gap: '0.75rem',
+                    alignItems: 'center',
+                    width: '100%',
+                  }}
+                >
+                  {alt.gif_url && (
+                    <img
+                      src={alt.gif_url}
+                      alt={alt.name}
                       style={{
-                        width: '6px',
-                        height: '6px',
-                        borderRadius: '50%',
-                        backgroundColor: i < alt.difficulty ? 'var(--color-accent)' : 'var(--color-surface)',
+                        width: '56px',
+                        height: '56px',
+                        borderRadius: '0.5rem',
+                        objectFit: 'cover',
+                        objectPosition: 'top',
+                        flexShrink: 0,
                       }}
                     />
-                  ))}
-                </div>
-              </button>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p
+                      className="text-sm"
+                      style={{ fontWeight: 600, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    >
+                      {alt.name}
+                    </p>
+                    {alt.muscle_groups[0] && (
+                      <span className="pill" style={{ fontSize: '0.75rem', marginTop: '0.25rem', display: 'inline-block' }}>
+                        {alt.muscle_groups[0]}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          width: '6px',
+                          height: '6px',
+                          borderRadius: '50%',
+                          backgroundColor: i < alt.difficulty ? 'var(--color-accent)' : 'var(--color-surface)',
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDislike(alt.id) }}
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      color: 'var(--color-text-secondary)', fontSize: '0.875rem',
+                      padding: '0.25rem', flexShrink: 0,
+                    }}
+                    title="No me gusta"
+                  >
+                    👎
+                  </button>
+                </button>
+                {dislikedConfirm === alt.id && (
+                  <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem', padding: '0 0.5rem', fontStyle: 'italic' }}>
+                    No volverá a aparecer.
+                  </p>
+                )}
+              </div>
             ))
           )}
         </div>

@@ -15,6 +15,8 @@ export type Exercise = {
   thumbnail_url: string | null
 }
 
+export type EnergyMode = 'normal' | 'low' | 'minimal' | 'bare'
+
 export type GenerateWorkoutInput = {
   userId: string
   fitnessLevel: 'never' | 'rusty' | 'active'
@@ -22,6 +24,7 @@ export type GenerateWorkoutInput = {
   equipment: string[]
   recentExerciseIds: string[]
   exercises: Exercise[]
+  energyMode?: EnergyMode
 }
 
 export type GeneratedWorkout = {
@@ -112,7 +115,9 @@ function pickSlot(
   return null
 }
 
-function buildTitle(exercises: Exercise[], availableTime: number): string {
+function buildTitle(exercises: Exercise[], availableTime: number, mode: EnergyMode = 'normal'): string {
+  if (mode === 'bare') return 'Hoy solo hay que cumplir'
+
   const total = exercises.length
   if (total === 0) return 'Entrenamiento'
 
@@ -132,13 +137,29 @@ function buildTitle(exercises: Exercise[], availableTime: number): string {
   }
 
   if (availableTime === 15) title = `Sesión rápida — ${title}`
+
+  if (mode === 'minimal') return `Sesión corta — ${title}`
+
   return title
 }
 
 export function generateWorkout(input: GenerateWorkoutInput): GeneratedWorkout {
   const { availableTime, recentExerciseIds, exercises } = input
+  const mode = input.energyMode ?? 'normal'
   const recentIds = new Set(recentExerciseIds)
-  const slots = SLOT_PLANS[availableTime]
+
+  let slots: SlotType[]
+  if (mode === 'bare') {
+    slots = ['core', 'mobility', 'core']
+  } else if (mode === 'minimal') {
+    slots = ['lower_body', 'core', 'core', 'mobility']
+  } else if (mode === 'low') {
+    const basePlan = SLOT_PLANS[availableTime]
+    slots = basePlan.map(s => s === 'cardio' ? 'mobility' : s)
+  } else {
+    slots = SLOT_PLANS[availableTime]
+  }
+
   const selected = new Set<string>()
   const result: Exercise[] = []
 
@@ -151,7 +172,7 @@ export function generateWorkout(input: GenerateWorkoutInput): GeneratedWorkout {
   }
 
   return {
-    title: buildTitle(result, availableTime),
+    title: buildTitle(result, availableTime, mode),
     durationMinutes: availableTime,
     exercises: result,
   }
