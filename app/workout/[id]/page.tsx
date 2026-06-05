@@ -20,12 +20,19 @@ export default async function WorkoutPage({
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: workout } = await supabase
-    .from('workouts')
-    .select('id, title, duration_minutes, exercise_ids')
-    .eq('id', id)
-    .eq('user_id', user.id)
-    .single()
+  const [{ data: workout }, { data: onboarding }] = await Promise.all([
+    supabase
+      .from('workouts')
+      .select('id, title, duration_minutes, exercise_ids')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single(),
+    supabase
+      .from('onboarding')
+      .select('fitness_level, equipment')
+      .eq('user_id', user.id)
+      .single(),
+  ])
 
   if (!workout) redirect('/dashboard')
 
@@ -54,10 +61,12 @@ export default async function WorkoutPage({
     easier_alternative: e.easier_alternative_id ? (alternativesMap[e.easier_alternative_id] ?? null) : null,
   }))
 
-  // Preserve workout exercise order
   const ordered = exerciseIds
     .map((eid) => exercisesWithAlts.find((e) => e.id === eid))
     .filter((e): e is WorkoutExercise => e !== undefined)
+
+  const fitnessLevel = (onboarding?.fitness_level ?? 'never') as 'never' | 'rusty' | 'active'
+  const equipment = (onboarding?.equipment as string[] | null) ?? []
 
   return (
     <WorkoutSession
@@ -66,6 +75,8 @@ export default async function WorkoutPage({
       durationMinutes={workout.duration_minutes}
       exercises={ordered}
       userId={user.id}
+      fitnessLevel={fitnessLevel}
+      equipment={equipment}
     />
   )
 }

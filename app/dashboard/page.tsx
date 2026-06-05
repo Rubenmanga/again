@@ -50,7 +50,11 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, { data: onboarding }, { data: weekHistory }, { data: lastWorkout }] = await Promise.all([
+  const todayUTC = new Date()
+  todayUTC.setUTCHours(0, 0, 0, 0)
+  const todayStart = todayUTC.toISOString()
+
+  const [{ data: profile }, { data: onboarding }, { data: weekHistory }, { data: lastWorkout }, { data: todayWorkout }] = await Promise.all([
     supabase
       .from('users')
       .select('display_name, email')
@@ -73,6 +77,14 @@ export default async function DashboardPage() {
       .eq('user_id', user.id)
       .not('completed_at', 'is', null)
       .order('completed_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('workouts')
+      .select('id, title, duration_minutes, created_at')
+      .eq('user_id', user.id)
+      .gte('created_at', todayStart)
+      .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
   ])
@@ -154,7 +166,7 @@ export default async function DashboardPage() {
                 Elige cuánto tiempo tienes y genera tu entreno.
               </p>
             </div>
-            <StartWorkoutButton />
+            <StartWorkoutButton todayWorkout={todayWorkout ?? null} />
           </div>
         </section>
 

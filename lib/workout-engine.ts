@@ -11,6 +11,8 @@ export type Exercise = {
   instructions: string
   coaching_cue: string
   easier_alternative_id: string | null
+  gif_url: string | null
+  thumbnail_url: string | null
 }
 
 export type GenerateWorkoutInput = {

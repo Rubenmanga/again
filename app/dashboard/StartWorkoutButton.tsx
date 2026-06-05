@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { generateWorkoutAction } from '@/app/actions/generate-workout'
 
 const DURATIONS: { value: 15 | 30 | 45 | 60; label: string; sub: string }[] = [
@@ -10,7 +11,12 @@ const DURATIONS: { value: 15 | 30 | 45 | 60; label: string; sub: string }[] = [
   { value: 60, label: '60 min', sub: 'Sin prisa' },
 ]
 
-export default function StartWorkoutButton() {
+interface Props {
+  todayWorkout: { id: string; title: string; duration_minutes: number | null } | null
+}
+
+export default function StartWorkoutButton({ todayWorkout }: Props) {
+  const router = useRouter()
   const [picking, setPicking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -38,6 +44,56 @@ export default function StartWorkoutButton() {
   }
 
   if (!picking) {
+    if (todayWorkout !== null) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
+            <div>
+              <p
+                className="text-xs uppercase"
+                style={{ color: 'var(--color-text-secondary)', letterSpacing: '0.08em', fontWeight: 600 }}
+              >
+                Tu rutina de hoy
+              </p>
+              <p
+                className="text-sm"
+                style={{ color: 'var(--color-text-primary)', fontWeight: 600, marginTop: '0.125rem' }}
+              >
+                {todayWorkout.title}
+              </p>
+              {todayWorkout.duration_minutes !== null && (
+                <p className="text-xs" style={{ color: 'var(--color-text-secondary)', marginTop: '0.125rem' }}>
+                  {todayWorkout.duration_minutes} min
+                </p>
+              )}
+            </div>
+          </div>
+          <button
+            className="btn-primary"
+            onClick={() => router.push(`/workout/${todayWorkout.id}`)}
+          >
+            Continuar
+          </button>
+          <button
+            onClick={() => setPicking(true)}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--color-text-secondary)',
+              fontSize: '0.75rem',
+              minHeight: '44px',
+            }}
+          >
+            + Generar nueva rutina
+          </button>
+          {error && (
+            <p className="text-xs text-center" style={{ color: '#ef4444' }}>{error}</p>
+          )}
+        </div>
+      )
+    }
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <button onClick={() => setPicking(true)} className="btn-primary w-full">

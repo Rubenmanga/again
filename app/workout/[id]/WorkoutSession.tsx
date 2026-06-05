@@ -1,13 +1,15 @@
 'use client'
 
-import { useReducer, useEffect, useRef } from 'react'
+import { useReducer, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { saveWorkoutHistoryAction } from '@/app/actions/save-workout-history'
+import ExerciseImage from './ExerciseImage'
+import SwapDrawer from './SwapDrawer'
 import type { WorkoutExercise } from './page'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-type Phase = 'intro' | 'exercise' | 'rest' | 'finish'
+type Phase = 'preview' | 'intro' | 'exercise' | 'rest' | 'finish'
 
 type State = {
   phase: Phase
@@ -22,6 +24,7 @@ type State = {
 }
 
 type Action =
+  | { type: 'START_PREVIEW' }
   | { type: 'ADVANCE_TO_EXERCISE' }
   | { type: 'COMPLETE_SET' }
   | { type: 'TIMED_NEXT' }
@@ -44,10 +47,7 @@ function makeExerciseState(exercises: WorkoutExercise[], index: number) {
   }
 }
 
-function finishOrRest(
-  state: State,
-  nextCompletedCount: number,
-): State {
+function finishOrRest(state: State, nextCompletedCount: number): State {
   const isLast = state.exerciseIndex === state.exercises.length - 1
   if (isLast) {
     return { ...state, phase: 'finish', completedCount: nextCompletedCount }
@@ -60,6 +60,10 @@ function reducer(state: State, action: Action): State {
   const totalSets = currentEx?.sets_default ?? 1
 
   switch (action.type) {
+    case 'START_PREVIEW': {
+      return { ...state, phase: 'intro' }
+    }
+
     case 'ADVANCE_TO_EXERCISE': {
       return {
         ...state,
@@ -140,6 +144,30 @@ function reducer(state: State, action: Action): State {
   }
 }
 
+// ─── Haptic / Audio utilities ────────────────────────────────────────────────
+
+function vibrate(pattern: number | number[]) {
+  if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+    navigator.vibrate(pattern)
+  }
+}
+
+function playBeep(frequency: number, duration: number, volume = 0.3) {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const oscillator = ctx.createOscillator()
+    const gainNode = ctx.createGain()
+    oscillator.connect(gainNode)
+    gainNode.connect(ctx.destination)
+    oscillator.frequency.value = frequency
+    oscillator.type = 'sine'
+    gainNode.gain.setValueAtTime(volume, ctx.currentTime)
+    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration / 1000)
+    oscillator.start(ctx.currentTime)
+    oscillator.stop(ctx.currentTime + duration / 1000)
+  } catch {}
+}
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
 const MOTIVATIONAL = [
@@ -154,19 +182,26 @@ export default function WorkoutSession({
   durationMinutes,
   exercises,
   userId,
+  fitnessLevel,
+  equipment,
 }: {
   workoutId: string
   title: string
   durationMinutes: number
   exercises: WorkoutExercise[]
   userId: string
+  fitnessLevel: 'never' | 'rusty' | 'active'
+  equipment: string[]
 }) {
   const router = useRouter()
   const startedAtRef = useRef<Date | null>(null)
   const savedRef = useRef(false)
+  const prevPhaseRef = useRef<Phase>('preview')
+
+  const [showSwapDrawer, setShowSwapDrawer] = useState(false)
 
   const [state, dispatch] = useReducer(reducer, {
-    phase: 'intro',
+    phase: 'preview',
     exerciseIndex: 0,
     setsDone: 0,
     restTimeLeft: 20,
@@ -179,6 +214,10 @@ export default function WorkoutSession({
 
   const currentEx = state.exercises[state.exerciseIndex]
   const isTimed = (currentEx?.duration_seconds ?? null) !== null
+
+  const maxDifficulty = ({ never: 2, rusty: 3, active: 4 } as const)[fitnessLevel]
+  const equipmentFilter = equipment.includes('resistance_bands') ? ['none', 'resistance_bands'] : ['none']
+  const excludeIds = state.exercises.filter(ex => ex.id !== currentEx?.id).map(ex => ex.id)
 
   // INTRO → auto-advance after 2 s
   useEffect(() => {
@@ -223,6 +262,49 @@ export default function WorkoutSession({
     }).catch(() => {})
   }, [state.phase])
 
+  // Haptic: countdown last 3 seconds
+  useEffect(() => {
+    if (state.phase !== 'exercise') return
+    if (!isTimed) return
+    if (state.exerciseTimeLeft <= 3 && state.exerciseTimeLeft > 0) {
+      playBeep(440, 100)
+      vibrate(30)
+    }
+    if (state.exerciseTimeLeft === 0) {
+      playBeep(660, 200)
+      vibrate(80)
+    }
+  }, [state.exerciseTimeLeft])
+
+  // Haptic: finish celebration
+  useEffect(() => {
+    if (state.phase !== 'finish') return
+    vibrate([100, 50, 100, 50, 200])
+    playBeep(880, 150)
+    setTimeout(() => playBeep(1100, 250), 200)
+  }, [state.phase])
+
+  // Haptic: rest → exercise transition
+  useEffect(() => {
+    if (state.phase === 'exercise' && prevPhaseRef.current === 'rest') {
+      vibrate(40)
+      playBeep(520, 80)
+    }
+    prevPhaseRef.current = state.phase
+  }, [state.phase, state.exerciseIndex])
+
+  function handleCompleteSet() {
+    vibrate(50)
+    playBeep(600, 80)
+    dispatch({ type: 'COMPLETE_SET' })
+  }
+
+  function handleTimedNext() {
+    vibrate(50)
+    playBeep(600, 80)
+    dispatch({ type: 'TIMED_NEXT' })
+  }
+
   function handleEasierAlternative() {
     const alt = currentEx?.easier_alternative
     if (!alt) return
@@ -230,6 +312,135 @@ export default function WorkoutSession({
       type: 'REPLACE_EXERCISE',
       exercise: { ...alt, easier_alternative: null },
     })
+  }
+
+  // ── PREVIEW ──────────────────────────────────────────────────────────────
+
+  if (state.phase === 'preview') {
+    return (
+      <Screen>
+        <div className="flex items-center justify-between px-4 pt-6 pb-2">
+          <button
+            onClick={() => router.push('/dashboard')}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--color-text-secondary)',
+              fontSize: '1.25rem',
+              lineHeight: 1,
+              minWidth: '44px',
+              minHeight: '44px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            aria-label="Salir"
+          >
+            ✕
+          </button>
+          <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+            {durationMinutes} min
+          </span>
+        </div>
+
+        <div className="px-4 pb-4">
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+            {title}
+          </h1>
+          <p className="text-sm" style={{ color: 'var(--color-text-secondary)', marginTop: '0.25rem' }}>
+            {state.exercises.length} ejercicios
+          </p>
+        </div>
+
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '0 1rem 1rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem',
+          }}
+        >
+          {state.exercises.map((ex, i) => (
+            <div
+              key={ex.id}
+              className="card"
+              style={{
+                padding: '0.875rem 1rem',
+                display: 'flex',
+                flexDirection: 'row',
+                gap: '0.75rem',
+                alignItems: 'center',
+              }}
+            >
+              <span
+                className="text-sm"
+                style={{ fontWeight: 700, color: 'var(--color-accent)', minWidth: '24px' }}
+              >
+                {i + 1}
+              </span>
+
+              {ex.gif_url && (
+                <img
+                  src={ex.gif_url}
+                  alt={ex.name}
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '0.5rem',
+                    objectFit: 'cover',
+                    objectPosition: 'top',
+                    flexShrink: 0,
+                  }}
+                />
+              )}
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p
+                  className="text-sm"
+                  style={{
+                    fontWeight: 600,
+                    color: 'var(--color-text-primary)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {ex.name}
+                </p>
+                <p className="text-xs" style={{ color: 'var(--color-text-secondary)', marginTop: '0.125rem' }}>
+                  {ex.duration_seconds
+                    ? `${ex.sets_default ?? 1} × ${ex.duration_seconds}s`
+                    : `${ex.sets_default ?? 1} × ${ex.reps_default} reps`}
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+                {Array.from({ length: 5 }).map((_, j) => (
+                  <div
+                    key={j}
+                    style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      backgroundColor: j < ex.difficulty ? 'var(--color-accent)' : 'var(--color-surface-raised)',
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="px-4 pb-8">
+          <button className="btn-primary" onClick={() => dispatch({ type: 'START_PREVIEW' })}>
+            Empezar
+          </button>
+        </div>
+      </Screen>
+    )
   }
 
   // ── INTRO ────────────────────────────────────────────────────────────────
@@ -352,6 +563,21 @@ export default function WorkoutSession({
 
   return (
     <Screen>
+      {/* Swap drawer */}
+      {showSwapDrawer && (
+        <SwapDrawer
+          currentExercise={currentEx}
+          excludeIds={excludeIds}
+          maxDifficulty={maxDifficulty}
+          equipmentFilter={equipmentFilter}
+          onSwap={(exercise) => {
+            dispatch({ type: 'REPLACE_EXERCISE', exercise })
+            setShowSwapDrawer(false)
+          }}
+          onClose={() => setShowSwapDrawer(false)}
+        />
+      )}
+
       {/* Exit modal */}
       {state.showExitModal && (
         <div
@@ -419,6 +645,13 @@ export default function WorkoutSession({
       {/* Exercise card */}
       <div className="flex-1 overflow-y-auto px-4 pb-4">
         <div className="card flex flex-col gap-4">
+          {/* Exercise image */}
+          <ExerciseImage
+            img0={currentEx.gif_url}
+            img1={currentEx.thumbnail_url}
+            name={currentEx.name}
+          />
+
           {/* Name */}
           <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
             {currentEx.name}
@@ -484,7 +717,7 @@ export default function WorkoutSession({
           <button
             className="btn-primary"
             disabled={!state.timerDone}
-            onClick={() => dispatch({ type: 'TIMED_NEXT' })}
+            onClick={handleTimedNext}
           >
             {state.timerDone
               ? (isLastSet ? 'Siguiente ejercicio →' : `Serie ${nextSetsDone} de ${totalSets}`)
@@ -497,7 +730,7 @@ export default function WorkoutSession({
             </p>
             <button
               className="btn-primary"
-              onClick={() => dispatch({ type: 'COMPLETE_SET' })}
+              onClick={handleCompleteSet}
             >
               {isLastSet ? 'Siguiente ejercicio →' : 'Serie completada'}
             </button>
@@ -519,6 +752,20 @@ export default function WorkoutSession({
             Hacer versión más fácil
           </button>
         )}
+
+        <button
+          onClick={() => setShowSwapDrawer(true)}
+          className="text-sm text-center"
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: 'var(--color-text-secondary)',
+            minHeight: '44px',
+          }}
+        >
+          Cambiar ejercicio
+        </button>
       </div>
     </Screen>
   )
