@@ -8,7 +8,6 @@ export type OnboardingData = {
   primary_goal: 'rebuild_muscle' | 'lose_fat' | 'feel_better' | 'energy'
   available_time: 15 | 30 | 45 | 60
   equipment: string[]
-  schedule_days: number[]
 }
 
 export type OnboardingState = { error?: string } | null
@@ -31,7 +30,6 @@ export async function completeOnboarding(
     primary_goal: data.primary_goal,
     available_time: data.available_time,
     equipment: data.equipment,
-    schedule_days: data.schedule_days,
     completed_at: new Date().toISOString(),
   })
 

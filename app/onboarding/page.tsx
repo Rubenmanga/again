@@ -32,17 +32,7 @@ const EQUIPMENT: { value: string; label: string; sub: string }[] = [
   { value: 'pull_up_bar', label: 'Barra de dominadas', sub: 'De marco de puerta o pared' },
 ]
 
-const DAYS = [
-  { label: 'Lu', value: 1 },
-  { label: 'Ma', value: 2 },
-  { label: 'Mi', value: 3 },
-  { label: 'Ju', value: 4 },
-  { label: 'Vi', value: 5 },
-  { label: 'Sa', value: 6 },
-  { label: 'Do', value: 0 },
-]
-
-const TOTAL_STEPS = 5
+const TOTAL_STEPS = 4
 
 // ─── Styles ────────────────────────────────────────────────────────────────
 
@@ -71,7 +61,6 @@ export default function OnboardingPage() {
   const [primaryGoal, setPrimaryGoal] = useState<OnboardingData['primary_goal'] | null>(null)
   const [availableTime, setAvailableTime] = useState<OnboardingData['available_time'] | null>(null)
   const [equipment, setEquipment] = useState<string[]>([])
-  const [scheduleDays, setScheduleDays] = useState<number[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -79,8 +68,7 @@ export default function OnboardingPage() {
     (step === 1 && fitnessLevel !== null) ||
     (step === 2 && primaryGoal !== null) ||
     (step === 3 && availableTime !== null) ||
-    (step === 4 && equipment.length > 0) ||
-    (step === 5 && scheduleDays.length > 0)
+    (step === 4 && equipment.length > 0)
 
   function toggleEquipment(value: string) {
     if (value === 'none') {
@@ -91,12 +79,6 @@ export default function OnboardingPage() {
         return without.includes(value) ? without.filter((e) => e !== value) : [...without, value]
       })
     }
-  }
-
-  function toggleDay(value: number) {
-    setScheduleDays((prev) =>
-      prev.includes(value) ? prev.filter((d) => d !== value) : [...prev, value]
-    )
   }
 
   function handleNext() {
@@ -117,7 +99,6 @@ export default function OnboardingPage() {
         primary_goal: primaryGoal,
         available_time: availableTime,
         equipment,
-        schedule_days: scheduleDays,
       })
       if (result?.error) setError(result.error)
     })
@@ -211,36 +192,6 @@ export default function OnboardingPage() {
                   multi
                 />
               ))}
-            </StepShell>
-          )}
-
-          {step === 5 && (
-            <StepShell title="¿Qué días te vienen bien?" sub="Elige al menos uno">
-              <div className="flex flex-wrap gap-2 pt-1">
-                {DAYS.map((day) => (
-                  <button
-                    key={day.value}
-                    onClick={() => toggleDay(day.value)}
-                    className="pill"
-                    style={
-                      scheduleDays.includes(day.value)
-                        ? {
-                            backgroundColor: 'var(--color-accent)',
-                            color: 'var(--color-text-primary)',
-                            fontWeight: 600,
-                            border: 'none',
-                          }
-                        : {
-                            backgroundColor: 'var(--color-surface-raised)',
-                            color: 'var(--color-text-secondary)',
-                            border: '1px solid transparent',
-                          }
-                    }
-                  >
-                    {day.label}
-                  </button>
-                ))}
-              </div>
             </StepShell>
           )}
         </div>

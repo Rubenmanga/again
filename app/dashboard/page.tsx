@@ -3,8 +3,6 @@ import { redirect } from 'next/navigation'
 import BottomNav from './BottomNav'
 import StartWorkoutButton from './StartWorkoutButton'
 
-const EXERCISE_COUNTS: Record<number, number> = { 15: 4, 30: 6, 45: 9, 60: 12 }
-
 const DAYS = [
   { label: 'Lu', value: 1 },
   { label: 'Ma', value: 2 },
@@ -15,12 +13,19 @@ const DAYS = [
   { label: 'Do', value: 0 },
 ]
 
-const MESSAGES = [
+const ACTIVE_MESSAGES = [
   'Mejor 5 minutos que nada.',
   'Estás volviendo, no empezando de cero.',
   'Hoy también cuenta.',
   'La constancia vale más que la perfección.',
   'Los pasos pequeños se acumulan.',
+]
+
+const INACTIVE_MESSAGES = [
+  'Llevas unos días parado. Hoy puede ser el día.',
+  'Sin presión. Un entreno corto también cuenta.',
+  'Retomar es lo más difícil. Ya estás aquí.',
+  'No hay que compensar, solo continuar.',
 ]
 
 function getGreeting(hour: number): string {
@@ -45,7 +50,7 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, { data: onboarding }, { data: weekHistory }] = await Promise.all([
+  const [{ data: profile }, { data: onboarding }, { data: weekHistory }, { data: lastWorkout }] = await Promise.all([
     supabase
       .from('users')
       .select('display_name, email')
@@ -53,7 +58,7 @@ export default async function DashboardPage() {
       .single(),
     supabase
       .from('onboarding')
-      .select('available_time, schedule_days')
+      .select('available_time')
       .eq('user_id', user.id)
       .single(),
     supabase
@@ -62,22 +67,37 @@ export default async function DashboardPage() {
       .eq('user_id', user.id)
       .not('completed_at', 'is', null)
       .gte('completed_at', getWeekStartISO()),
+    supabase
+      .from('workout_history')
+      .select('completed_at')
+      .eq('user_id', user.id)
+      .not('completed_at', 'is', null)
+      .order('completed_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ])
 
   if (!onboarding) redirect('/onboarding')
+
+  const now = new Date()
+  const today = now.getUTCDay()
+  const hour = now.getUTCHours()
+  const greeting = getGreeting(hour)
+
+  // Inactivity: no workout in the last 2 days
+  const daysSinceLast = lastWorkout?.completed_at
+    ? (now.getTime() - new Date(lastWorkout.completed_at).getTime()) / (1000 * 60 * 60 * 24)
+    : Infinity
+  const isInactive = daysSinceLast > 2
+
+  const messagePool = isInactive ? INACTIVE_MESSAGES : ACTIVE_MESSAGES
+  const message = messagePool[now.getUTCDay() % messagePool.length]
 
   const completedDays = new Set<number>(
     (weekHistory ?? [])
       .filter((r) => r.completed_at)
       .map((r) => new Date(r.completed_at as string).getUTCDay())
   )
-
-  const now = new Date()
-  const today = now.getUTCDay()
-  const hour = now.getUTCHours()
-  const greeting = getGreeting(hour)
-  const message = MESSAGES[now.getUTCDay() % MESSAGES.length]
-  const isRestDay = !onboarding.schedule_days.includes(today)
 
   const nameSource: string = profile?.display_name ?? profile?.email ?? user.email ?? ''
   const initials = nameSource
@@ -120,48 +140,25 @@ export default async function DashboardPage() {
           </p>
         </section>
 
-        {/* Today's workout card */}
+        {/* Workout card */}
         <section>
-          {isRestDay ? (
-            <div className="card flex flex-col gap-2">
+          <div className="card flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
               <p
                 className="text-xs font-semibold uppercase tracking-wider"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
-                Hoy
-              </p>
-              <p className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                Día de descanso
+                Entrenamiento de hoy
               </p>
               <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                Hoy toca descansar. También es parte del proceso.
+                Elige cuánto tiempo tienes y genera tu entreno.
               </p>
             </div>
-          ) : (
-            <div className="card flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <p
-                  className="text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  Entrenamiento de hoy
-                </p>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                    {onboarding.available_time} min
-                  </span>
-                  <span style={{ color: 'var(--color-surface-raised)' }}>·</span>
-                  <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                    {EXERCISE_COUNTS[onboarding.available_time] ?? 6} ejercicios
-                  </span>
-                </div>
-              </div>
-              <StartWorkoutButton />
-            </div>
-          )}
+            <StartWorkoutButton />
+          </div>
         </section>
 
-        {/* Weekly streak */}
+        {/* Weekly grid */}
         <section className="card flex flex-col gap-4">
           <p
             className="text-xs font-semibold uppercase tracking-wider"

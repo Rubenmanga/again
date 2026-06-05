@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { generateWorkout, type Exercise } from '@/lib/workout-engine'
 
-export async function generateWorkoutAction(): Promise<{ error: string } | undefined> {
+export async function generateWorkoutAction(durationMinutes: 15 | 30 | 45 | 60): Promise<{ error: string } | undefined> {
   const supabase = await createClient()
 
   const {
@@ -15,7 +15,7 @@ export async function generateWorkoutAction(): Promise<{ error: string } | undef
 
   const { data: onboarding } = await supabase
     .from('onboarding')
-    .select('fitness_level, available_time, equipment')
+    .select('fitness_level, equipment')
     .eq('user_id', user.id)
     .single()
 
@@ -34,7 +34,7 @@ export async function generateWorkoutAction(): Promise<{ error: string } | undef
   )
 
   const fitnessLevel = onboarding.fitness_level as 'never' | 'rusty' | 'active'
-  const availableTime = onboarding.available_time as 15 | 30 | 45 | 60
+  const availableTime = durationMinutes
   const maxDifficulty = ({ never: 2, rusty: 3, active: 4 } as const)[fitnessLevel]
   const equipmentFilter = onboarding.equipment.includes('resistance_bands')
     ? ['none', 'resistance_bands']
