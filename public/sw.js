@@ -32,7 +32,11 @@ self.addEventListener('fetch', (event) => {
 
   // Navegación (HTML): siempre red primero — nunca cachear páginas
   if (request.mode === 'navigate') {
-    event.respondWith(fetch(request).catch(() => caches.match('/')))
+    event.respondWith(
+      fetch(request).catch(() =>
+        new Response('Sin conexión', { status: 503, headers: { 'Content-Type': 'text/plain' } })
+      )
+    )
     return
   }
 
